@@ -1,0 +1,33 @@
+// Конфигурация БД и модели
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+generator client {
+  provider = "prisma-client-js"
+}
+model Session {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Family {
+  id           String        @id @default(uuid())
+  familyId     String        @unique
+  passwordHash String
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  amount    Float
+  type      String   // 'income' или 'expense'
+  category  String?
+  family    Family   @relation(fields: [familyId], references: [id])
+  familyId  String
+  createdAt DateTime @default(now())
+}
