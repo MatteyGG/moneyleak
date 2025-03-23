@@ -5,6 +5,7 @@ export const Errors = {
   REGISTER_FORMAT: "❌ Формат: /register [ID семьи] [пароль]",
   FAMILY_EXISTS: "❌ Семья с таким ID уже существует",
   GENERIC_ERROR: "⚠️ Произошла ошибка, попробуйте позже",
+  SESSION_ERROR: "⚠️ Ошибка сессии. Перезайдите в систему",
 };
 
 export const HelpMessages = {

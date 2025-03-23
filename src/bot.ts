@@ -7,7 +7,7 @@ export const bot = new Bot<MyContext>(process.env.BOT_TOKEN!);
 
 bot.use(
   session({
-    initial: (): SessionData => ({ isLoggedIn: false, familyId: "" }),
+    initial: (): SessionData => ({ isLoggedIn: false, familyId: "", familyName: "" }),
     storage: prismaSessionStorage,
   })
 );

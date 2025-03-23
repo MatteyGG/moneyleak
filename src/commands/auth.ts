@@ -5,6 +5,19 @@ import prisma from "../database";
 import { Keyboard } from "grammy";
 import { Errors, HelpMessages, StartMessage } from "../texts";
 
+// Стартовая команда
+bot.command("start", async (ctx) => {
+  const keyboard = new Keyboard()
+    .text("/login")
+    .text("/register")
+    .row()
+    .text("/help");
+
+  await ctx.reply(StartMessage, {
+    reply_markup: keyboard.resized(),
+  });
+});
+
 // Регистрация семьи
 bot.command("register", async (ctx) => {
   const args = ctx.match.split(" ");
@@ -33,15 +46,15 @@ bot.command("register", async (ctx) => {
 bot.command("login", async (ctx) => {
   const args = ctx.match.trim().split(" ");
 
-  if (args.length < 2) {
-    return ctx.reply(HelpMessages.LOGIN_HELP, {
-      reply_markup: { remove_keyboard: true },
-    });
-  }
-
   if (ctx.session.isLoggedIn) {
     return ctx.reply("❌ Вы уже авторизованы", {
       reply_markup: new Keyboard().text("/logout").resized(),
+    });
+  }
+
+  if (args.length < 2) {
+    return ctx.reply(HelpMessages.LOGIN_HELP, {
+      reply_markup: { remove_keyboard: true },
     });
   }
 
@@ -62,7 +75,8 @@ bot.command("login", async (ctx) => {
     // Сохраняем данные в сессии
     ctx.session.isLoggedIn = true;
     ctx.session.familyId = family.id;
-
+    ctx.session.familyName = family.familyId;
+    ctx.session.username = ctx.from?.username || "Неизвестный пользователь";
     // Показываем новую клавиатуру
     const financeKeyboard = new Keyboard()
       .text("/expense")
@@ -71,7 +85,7 @@ bot.command("login", async (ctx) => {
       .text("/report")
       .text("/logout");
 
-    await ctx.reply("✅ Успешный вход!", {
+    await ctx.reply(`✅ Успешный вход, ${ctx.session.username}!`, {
       reply_markup: financeKeyboard.resized(),
     });
   } catch (error) {
@@ -88,9 +102,10 @@ bot.command("logout", async (ctx) => {
 
   ctx.session.isLoggedIn = false;
   ctx.session.familyId = '';
+  ctx.session.username = '';
 
   await ctx.reply("✅ Вы вышли из системы", {
-    reply_markup: new Keyboard().text("/login").text("/help"),
+    reply_markup: new Keyboard().text("/login").text("/register").text("/help"),
   });
 });
 

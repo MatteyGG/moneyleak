@@ -3,9 +3,11 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 generator client {
   provider = "prisma-client-js"
 }
+
 model Session {
   id        String   @id @default(uuid())
   key       String   @unique
@@ -23,11 +25,13 @@ model Family {
 }
 
 model Transaction {
-  id        String   @id @default(uuid())
-  amount    Float
-  type      String   // 'income' или 'expense'
-  category  String?
-  family    Family   @relation(fields: [familyId], references: [id])
-  familyId  String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  familyId    String
+  username    String   @default("unknown")
+  type        String // 'income' или 'expense'
+  category    String?
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+  family      Family   @relation(fields: [familyId], references: [familyId])
 }

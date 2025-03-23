@@ -1,8 +1,13 @@
 import { bot } from "./bot";
 import { connectDB } from "./database";
 
+import "./commands/finance";
 import "./commands/auth";
+import "./reports/reports";
+import "./reports/excel";
+import "./reports/png";
 import "./commands/helper";
+
 
 async function main() {
   try {
