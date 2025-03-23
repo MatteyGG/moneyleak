@@ -39,6 +39,12 @@ bot.command("login", async (ctx) => {
     });
   }
 
+  if (ctx.session.isLoggedIn) {
+    return ctx.reply("❌ Вы уже авторизованы", {
+      reply_markup: new Keyboard().text("/logout").resized(),
+    });
+  }
+
   const [familyId, password] = args;
 
   try {

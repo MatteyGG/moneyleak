@@ -1,9 +1,8 @@
 import { bot } from "./bot";
 import { connectDB } from "./database";
-import "./commands/auth"; // Импорт авторизации
-import "./commands/finance"; // Импорт финансов
-import "./commands/helper"; // Импорт вспомогательных команд
 
+import "./commands/auth";
+import "./commands/helper";
 
 async function main() {
   try {
@@ -37,3 +36,5 @@ bot.catch((err) => {
 
 // Запускаем приложение
 main();
+
+

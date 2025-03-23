@@ -31,3 +31,8 @@ bot.on("message", async (ctx) => {
     );
   }
 });
+
+bot.on("callback_query:data", async (ctx) => {
+  console.warn("Unknown callback data:", ctx.callbackQuery.data);
+  await ctx.answerCallbackQuery("⚠️ Устаревшая кнопка");
+});

@@ -1,83 +1,54 @@
-// src/commands/finance.ts
 import { bot } from "../bot";
-import { Errors, HelpMessages } from "../texts";
-import { Keyboard } from "grammy";
+import { MyContext } from "../types";
+import {
+  startTransactionFlow,
+  handleCategoryInput,
+  handleAmountInput,
+  saveTransaction,
+} from "./transactionFlow";
 import { requireAuth } from "../middleware/auth";
+import { Keyboard } from "grammy";
+import { Categories, Errors } from "../texts";
 
+bot.command(["expense", "income"], requireAuth, async (ctx) => {
+  const type = ctx.message?.text.slice(1) as "expense" | "income";
+  await startTransactionFlow(ctx, type);
+});
 
-bot.command("expense", async (ctx) => {
-  const args = ctx.match.trim().split(" ");
-
-  if (args.length < 2) {
-    return ctx.reply(HelpMessages.EXPENSE_HELP, {
-      reply_markup: { remove_keyboard: true },
-    });
-  }
-
-  const [amount, category] = args;
-
+bot.callbackQuery(/^(amount_|category_)/, requireAuth, async (ctx) => {
   try {
-    const amountNumber = parseFloat(amount);
+    if (!ctx.session.transactionFlow) return;
 
-    if (isNaN(amountNumber)) {
-      return ctx.reply(Errors.INVALID_INPUT);
+    // Обработка категорий
+    if (ctx.callbackQuery.data.startsWith("category_")) {
+      const category = ctx.callbackQuery.data.replace("category_", "");
+      await handleCategoryInput(ctx);
+      return;
     }
 
-    await ctx.prisma.transaction.create({
-      data: {
-        amount: amountNumber,
-        category,
-        familyId: ctx.session.familyId!,
-        type: "expense",
-      },
-    });
+    // Обработка сумм
+    if (ctx.callbackQuery.data.startsWith("amount_")) {
+      const amount = parseInt(ctx.callbackQuery.data.replace("amount_", ""));
+      await handleAmountInput(ctx);
+      return;
+    }
 
-    await ctx.reply(`✅ Расход ${amountNumber} ₽ added to ${category}`, {
-      reply_markup: new Keyboard().text("/report").resized(),
-    });
+    await ctx.answerCallbackQuery();
   } catch (error) {
-    console.error("Expense error:", error);
-    ctx.reply(Errors.GENERIC_ERROR);
+    console.error("Callback error:", error);
+    await ctx.answerCallbackQuery("⚠️ Произошла ошибка");
   }
 });
 
-bot.command("income", requireAuth, async (ctx) => {
-  const args = ctx.match.trim().split(" ");
-
-  if (args.length < 2) {
-    return ctx.reply(HelpMessages.INCOME_HELP, {
-      reply_markup: { remove_keyboard: true },
-    });
+bot.on("message", requireAuth, async (ctx, next) => {
+  if (ctx.session.transactionFlow?.amount === undefined) {
+    await saveTransaction(ctx);
+    return;
   }
-
-  const [amount, category] = args;
-
-  try {
-    const amountNumber = parseFloat(amount);
-
-    if (isNaN(amountNumber)) {
-      return ctx.reply(Errors.INVALID_INPUT);
-    }
-
-    await ctx.prisma.transaction.create({
-      data: {
-        amount: amountNumber,
-        category,
-        familyId: ctx.session.familyId, // Теперь точно string
-        type: "income",
-      },
-    });
-
-    await ctx.reply(`✅ Доход ${amountNumber} ₽ added to ${category}`, {
-      reply_markup: new Keyboard().text("/report").resized(),
-    });
-  } catch (error) {
-    console.error("Income error:", error);
-    ctx.reply(Errors.GENERIC_ERROR);
-  }
+  await next();
 });
 
-bot.command("report", async (ctx) => {
+bot.command("report", requireAuth, async (ctx) => {
   try {
     const transactions = await ctx.prisma.transaction.findMany({
       where: {
@@ -108,3 +79,4 @@ bot.command("report", async (ctx) => {
     ctx.reply(Errors.GENERIC_ERROR);
   }
 });
+
