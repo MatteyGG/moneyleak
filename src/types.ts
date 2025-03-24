@@ -11,9 +11,10 @@ export interface SessionData {
     category?: string;
     amount?: number;
     description?: string;
-    username?: string;
+    step: "category" | "amount" | "description";
   };
 }
+
 
 export type MyContext = {
   prisma: PrismaClient;

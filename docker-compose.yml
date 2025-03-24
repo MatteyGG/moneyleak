@@ -1,0 +1,27 @@
+# docker-compose.yml docker-compose up --build
+services:
+  moneyleak:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@db:5432/moneyleak"
+      NODE_ENV: production
+    env_file:
+      - .env
+  db:
+    image: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moneyleak
+
+volumes:
+  db-data:
+

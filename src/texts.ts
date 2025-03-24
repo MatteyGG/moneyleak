@@ -31,9 +31,11 @@ export const StartMessage = `👋 Привет! Я помогу вам вест�
 
 export const Categories = {
   expense: [
-    "🍔 Еда",
+    "🍔 Фаст-фуд",
+    "🛒 Продукты",
+    "🏠 Быт",
     "🚕 Транспорт",
-    "🏠 Жильё",
+    "🏫 Учеба",
     "🎮 Развлечения",
     "👕 Одежда",
     "❔ Другое",
@@ -48,6 +50,19 @@ export const Categories = {
 };
 
 export const AmountButtons = {
-  preset: [500, 1000, 2000],
+  preset: [500, 1000, 1500, 2000],
   custom: "🔢 Другая сумма",
+};
+
+export const CallbackActions = {
+  CATEGORY_PREFIX: "category_",
+  AMOUNT_PREFIX: "amount_",
+  CUSTOM_AMOUNT: "custom_amount",
+  CONFIRM: "confirm_transaction",
+  CANCEL: "cancel_transaction",
+  SKIP_DESCRIPTION: "skip_description",
+};
+
+export const Messages = {
+  DESCRIPTION_SKIPPED: "Описание пропущено",
 };
