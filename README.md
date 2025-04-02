@@ -4,6 +4,7 @@
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0-blue)](https://nodejs.org/)
 [![Prisma ORM](https://img.shields.io/badge/ORM-Prisma-2D3748?logo=prisma)](https://www.prisma.io/)
 [![Grammy Framework](https://img.shields.io/badge/Telegram%20Bot-Grammy-2CA5E0)](https://grammy.dev/)
+[![Telegram Bot](https://img.shields.io/badge/%F0%9F%92%AC%20Telegram-@moneyleak__bot-2CA5E0?logo=telegram)](https://t.me/moneyleak_bot)
 
 **Telegram-бот для совместного учета семейного бюджета**  
 Удобное управление финансами семьи прямо в Telegram с автоматической аналитикой и экспортом данных.
