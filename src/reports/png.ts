@@ -131,7 +131,7 @@ async function generateTrendChart(familyName: string) {
 }
 
 // Отправка отчета в боте
-bot.command("spending_chart", requireAuth, async (ctx) => {
+bot.command("charts", requireAuth, async (ctx) => {
   if (!ctx.from) {
     await ctx.reply("Ошибка: не могу определить ваш ID");
     return;

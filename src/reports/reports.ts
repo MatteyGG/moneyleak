@@ -46,11 +46,25 @@ async function generateReport(ctx: MyContext, period: string) {
       `💰 Баланс: ${formatCurrency(balance)}\n` +
         `📈 Доходы: ${formatCurrency(income)}\n` +
         `📉 Расходы: ${formatCurrency(expenses)}\n\n` +
-        `📅 Период: ${period === "all" ? "все время" : period === "month" ? "за месяц" : "за неделю"}`,
+        `📅 Период: ${
+          period === "all"
+            ? "все время"
+            : period === "month"
+            ? "за месяц"
+            : period === "week"
+            ? "за неделю"
+            : "за день"
+        }
+        Экспорт в Excel:\n
+        /excel_report
+        Графики:\n
+        /charts
+        `,
       {
         reply_markup: new Keyboard()
-          .text("/report_month")
           .text("/report_week")
+          .text("/report_day")
+          .text("/report_all")
           .resized(),
       }
     );

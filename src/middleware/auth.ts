@@ -4,7 +4,7 @@ import { Errors } from "../texts";
 
 export const requireAuth: Middleware<MyContext> = async (ctx, next) => {
   const text = ctx.message?.text?.split(" ")[0];
-  if (text === "/help" || text === "/register" || text === "/login") {
+  if (text === "/start" || text === "/help" || text === "/register" || text === "/login") {
     await next();
     return;
   }

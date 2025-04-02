@@ -2,6 +2,10 @@ FROM node:22-alpine
 
 WORKDIR /app
 
+RUN sed -i 's/https/http/' /etc/apk/repositories
+
+RUN apk add curl
+
 COPY package*.json ./
 COPY prisma ./prisma
 
