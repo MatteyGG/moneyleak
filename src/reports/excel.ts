@@ -1,8 +1,10 @@
 import ExcelJS from "exceljs";
 import { PrismaClient } from "@prisma/client";
-import { InputFile } from "grammy";
+import { InlineKeyboard, InputFile } from "grammy";
 import { bot } from "../bot";
 import { MyContext } from "../types";
+import { ExcelReportTexts, Errors, Categories } from "../texts";
+import { getPeriodDates } from "./utils";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +14,7 @@ async function generateExcelReport(
   startDate: Date,
   endDate: Date
 ) {
-  // 1. Получаем данные из БД через Prisma
+  // Получаем данные из БД через Prisma
   const transactions = await prisma.transaction.findMany({
     where: {
       familyId: familyName,
@@ -26,99 +28,289 @@ async function generateExcelReport(
     },
   });
 
-  // 2. Создаем Excel-документ
+  // Создаем Excel-документ
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Транзакции");
 
-  // 3. Заголовки столбцов
-  worksheet.columns = [
-    { header: "Дата", key: "date", width: 15 },
-    { header: "Категория", key: "category", width: 20 },
-    { header: "Тип", key: "type", width: 12 },
-    {
-      header: "Сумма",
-      key: "amount",
-      width: 15,
-      style: { numFmt: "#,##0.00" },
-    },
-    { header: "Описание", key: "description", width: 30 },
-  ];
+  // Добавляем заголовок отчета
+  worksheet.mergeCells('A1:E1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = `Отчет по семье: ${familyName}`;
+  titleCell.font = { bold: true, size: 16 };
+  titleCell.alignment = { horizontal: 'center' };
 
-  // 4. Стили для заголовков
-  worksheet.getRow(1).eachCell((cell) => {
+  worksheet.mergeCells('A2:E2');
+  const periodCell = worksheet.getCell('A2');
+  periodCell.value = `Период: ${startDate.toLocaleDateString('ru-RU')} - ${endDate.toLocaleDateString('ru-RU')}`;
+  periodCell.font = { italic: true };
+  periodCell.alignment = { horizontal: 'center' };
+
+  // Добавляем пустую строку
+  worksheet.addRow([]);
+
+  // Запоминаем начальную позицию для таблицы данных
+  const tableStartRow = worksheet.rowCount + 1;
+  const tableStartCell = 'A' + tableStartRow;
+
+  // Добавляем заголовки столбцов
+  const headerRow = worksheet.addRow(['Дата', 'Категория', 'Тип', 'Сумма', 'Описание']);
+  
+  // Стили для заголовков
+  headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FF4F81BD" },
     };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
   });
 
-  // 5. Добавляем данные
-  transactions.forEach((transaction) => {
-    worksheet.addRow({
-      date: transaction.createdAt.toLocaleDateString("ru-RU"),
-      category: transaction.category,
-      type: transaction.type === "income" ? "Доход" : "Расход",
-      amount: transaction.amount,
-      description: transaction.description || "",
+  // Устанавливаем ширину столбцов
+  worksheet.columns = [
+    { width: 15 },
+    { width: 20 },
+    { width: 12 },
+    { width: 15 },
+    { width: 30 },
+  ];
+
+  // Добавляем данные
+  if (transactions.length === 0) {
+    const noDataRow = worksheet.addRow(['Нет данных для отображения']);
+    worksheet.mergeCells(`A${noDataRow.number}:E${noDataRow.number}`);
+  } else {
+    // Запоминаем номер строки, с которой начинаются данные
+    const dataStartRow = worksheet.rowCount + 1;
+    
+    // Добавляем данные транзакций
+    transactions.forEach((transaction) => {
+      const row = worksheet.addRow([
+        transaction.createdAt.toLocaleDateString("ru-RU"),
+        transaction.category,
+        transaction.type === "income" ? "Доход" : "Расход",
+        transaction.amount,
+        transaction.description || "",
+      ]);
+      
+      // Форматируем ячейку с суммой
+      row.getCell(4).numFmt = '#,##0.00 ₽';
     });
-  });
+    
+    // Запоминаем номер строки, на которой заканчиваются данные
+    const dataEndRow = worksheet.rowCount;
+    const tableEndCell = 'E' + dataEndRow;
+    const tableRange = tableStartCell + ':' + tableEndCell;
 
-  // 6. Добавим итоги доходов и расходов
-  const incomeTotal = worksheet.addRow({
-    date: "ИТОГО ДОХОДЫ:",
-    amount: {
-      formula: `SUMIFS(D2:D${worksheet.rowCount}, C2:C${worksheet.rowCount}, "Доход")`,
-    },
-  });
-  incomeTotal.getCell("amount").numFmt = "#,##0.00";
-  incomeTotal.font = { bold: true };
+    // Создаем смарт-таблицу
+    worksheet.addTable({
+      name: 'TransactionTable',
+      ref: tableRange,
+      headerRow: true,
+      totalsRow: false,
+      style: {
+        theme: 'TableStyleMedium2',
+        showRowStripes: true,
+      },
+      columns: [
+        { name: 'Дата', filterButton: true },
+        { name: 'Категория', filterButton: true },
+        { name: 'Тип', filterButton: true },
+        { name: 'Сумма', filterButton: false },
+        { name: 'Описание', filterButton: true },
+      ],
+      rows: transactions.map((transaction) => [
+        transaction.createdAt.toLocaleDateString("ru-RU"),
+        transaction.category,
+        transaction.type === "income" ? "Доход" : "Расход",
+        transaction.amount,
+        transaction.description || "",
+      ]),
+    });
 
-  const expenseTotal = worksheet.addRow({
-    date: "ИТОГО РАСХОДЫ:",
-    amount: {
-      formula: `SUMIFS(D2:D${worksheet.rowCount}, C2:C${worksheet.rowCount}, "Расход")`,
-    },
-  });
-  expenseTotal.getCell("amount").numFmt = "#,##0.00";
-  expenseTotal.font = { bold: true };
+    // Добавляем пустую строку для разделения данных и итогов
+    worksheet.addRow([]);
 
-  // 7. Сохраняем в буфер
+    // Добавляем итоги ПОСЛЕ таблицы (они не будут включены в фильтр)
+    const incomeTotal = worksheet.addRow([
+      "ИТОГО ДОХОДЫ:",
+      "",
+      "",
+      {
+        formula: `SUMIF(TransactionTable[Тип], "Доход", TransactionTable[Сумма])`
+      },
+      ""
+    ]);
+    
+    incomeTotal.getCell(4).numFmt = '#,##0.00 ₽';
+    incomeTotal.font = { bold: true };
+    incomeTotal.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE6FFE6" },
+    };
+
+    const expenseTotal = worksheet.addRow([
+      "ИТОГО РАСХОДЫ:",
+      "",
+      "",
+      {
+        formula: `SUMIF(TransactionTable[Тип], "Расход", TransactionTable[Сумма])`
+      },
+      ""
+    ]);
+    
+    expenseTotal.getCell(4).numFmt = '#,##0.00 ₽';
+    expenseTotal.font = { bold: true };
+    expenseTotal.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFE6E6" },
+    };
+
+    // Добавляем баланс
+    const balanceRow = worksheet.addRow([
+      "БАЛАНС:",
+      "",
+      "",
+      {
+        formula: `D${incomeTotal.number}-D${expenseTotal.number}`
+      },
+      ""
+    ]);
+    
+    balanceRow.getCell(4).numFmt = '#,##0.00 ₽';
+    balanceRow.font = { bold: true };
+    balanceRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F0F0' }
+    };
+
+    // Добавляем анализ по категориям
+    worksheet.addRow([]); // Пустая строка
+    
+    const analysisTitle = worksheet.addRow(["АНАЛИЗ ПО КАТЕГОРИЯМ"]);
+    analysisTitle.font = { bold: true, size: 14 };
+    worksheet.mergeCells(`A${analysisTitle.number}:E${analysisTitle.number}`);
+    
+    // Анализ расходов по категориям
+    Categories.expense.forEach(category => {
+      // Очищаем категорию от эмодзи для точного сравнения
+      const cleanCategory = category.replace(/^[^\w]*\s/, '');
+      
+      const categoryRow = worksheet.addRow([
+        category,
+        "",
+        "",
+        {
+          formula: `SUMIFS(TransactionTable[Сумма], TransactionTable[Категория], "*${cleanCategory}*", TransactionTable[Тип], "Расход")`
+        },
+        ""
+      ]);
+      
+      categoryRow.getCell(4).numFmt = '#,##0.00 ₽';
+    });
+  }
+
+  // Сохраняем в буфер
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer;
 }
 
-// Пример использования в обработчике команды бота (Grammy)
+// Обработчик команды /excel_report
 bot.command("excel_report", async (ctx: MyContext) => {
+  // Проверяем авторизацию
+  if (!ctx.session.familyName) {
+    await ctx.reply(Errors.NOT_LOGGED_IN);
+    return;
+  }
+
+  // Создаем клавиатуру с выбором периода
+  const keyboard = new InlineKeyboard()
+    .text(ExcelReportTexts.week, "excel_report_week")
+    .text(ExcelReportTexts.month, "excel_report_month")
+    .row()
+    .text(ExcelReportTexts.year, "excel_report_year")
+    .text(ExcelReportTexts.all, "excel_report_all");
+
+  await ctx.reply(ExcelReportTexts.selectRange, { reply_markup: keyboard });
+});
+
+// Тип для периода отчета
+type ReportPeriod = 'week' | 'month' | 'year' | 'all';
+
+// Обработчик callback-запросов для отчетов
+bot.callbackQuery(/^excel_report_(week|month|year|all)$/, async (ctx) => {
   try {
-    // Получаем данные за текущий месяц
-    const startDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    );
-    const endDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      0
-    );
+    await ctx.answerCallbackQuery();
+    
+    // Проверяем авторизацию
+    if (!ctx.session.familyName) {
+      await ctx.reply(Errors.NOT_LOGGED_IN);
+      return;
+    }
+    
+    const period = ctx.match![1] as ReportPeriod;
+
+    let startDate: Date, endDate: Date;
+
+    // Для всех периодов, кроме "all", используем утилиту getPeriodDates
+    if (period === "all") {
+      const firstTransaction = await prisma.transaction.findFirst({
+        where: {
+          familyId: ctx.session.familyName,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+      
+      startDate = firstTransaction ? firstTransaction.createdAt : new Date(2000, 0, 1);
+      endDate = new Date();
+    } else {
+      // Для периода "year" устанавливаем корректные даты
+      if (period === "year") {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+      } else {
+        // Для остальных периодов используем утилиту
+        [startDate, endDate] = getPeriodDates(period);
+      }
+    }
+
+    // Уведомляем пользователя о начале генерации
+    if (ctx.callbackQuery.message && 'text' in ctx.callbackQuery.message) {
+      await ctx.editMessageText(ExcelReportTexts.generating);
+    }
+
+    // Генерируем и отправляем отчет
     const excelBuffer = await generateExcelReport(
       ctx.session.familyName,
       startDate,
       endDate
     );
 
-    // Отправляем файл пользователю
+    // Создаем безопасное название периода для использования в тексте
+    const periodTextMap: Record<ReportPeriod, string> = {
+      week: ExcelReportTexts.week,
+      month: ExcelReportTexts.month,
+      year: ExcelReportTexts.year,
+      all: ExcelReportTexts.all
+    };
+
     await ctx.replyWithDocument(
       new InputFile(
         Buffer.from(excelBuffer),
-        `report_${new Date().toISOString().slice(0, 10)}.xlsx`
-      )
+        `report_${period}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      ),
+      {
+        caption: `Отчет за ${periodTextMap[period]} - ${ctx.session.familyName}`
+      }
     );
   } catch (error) {
-    await ctx.reply("Ошибка генерации отчета 😢");
-    console.error(error);
+    await ctx.reply(Errors.GENERIC_ERROR);
+    console.error("Ошибка генерации Excel отчета:", error);
   }
 });
-

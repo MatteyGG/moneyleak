@@ -25,6 +25,8 @@ export const StartMessage = `👋 Привет! Я помогу вам вест�
 /register [ID семьи] [пароль] - Создать семью
 /login [ID семьи] [пароль] - Войти в семью
 
+/expense - Добавить расход
+/income - Добавить доход
 
 /help - Помощь
 /report - Отчёт за месяц
@@ -36,12 +38,18 @@ export const StartMessage = `👋 Привет! Я помогу вам вест�
 export const Categories = {
   expense: [
     "🍔 Фаст-фуд",
+    "🍽️ Обеды вне дома",
+    "🚬 Табак",
+    "🏥 Здоровье",
     "🛒 Продукты",
     "🏠 Быт",
+    "📅 Рассрочки",
     "🚕 Транспорт",
     "🏫 Учеба",
     "🎮 Развлечения",
     "👕 Одежда",
+    "💡 ЖКУ",
+    "📞 Связь",
     "❔ Другое",
   ],
   income: [
@@ -54,7 +62,7 @@ export const Categories = {
 };
 
 export const AmountButtons = {
-  preset: [500, 1000, 1500, 2000],
+  preset: [250, 500, 1000, 1500],
   custom: "🔢 Другая сумма",
 };
 
@@ -69,4 +77,13 @@ export const CallbackActions = {
 
 export const Messages = {
   DESCRIPTION_SKIPPED: "Описание пропущено",
+};
+
+export const ExcelReportTexts = {
+  selectRange: "📊 Выберите период для отчета:",
+  week: "📅 За неделю",
+  month: "📅 За месяц",
+  year: "📅 За год",
+  all: "📅 Весь период",
+  generating: "📊 Генерация отчета...",
 };
